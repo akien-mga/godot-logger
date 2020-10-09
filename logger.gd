@@ -115,6 +115,7 @@ class Module:
 	var output_level = 0
 	var output_strategies = []
 	var logfile = null
+	var time_template = "hh:MM:ss"
 
 	func _init(_name, _output_level, _output_strategies, _logfile):
 		name = _name
@@ -218,9 +219,10 @@ const MAX_STRATEGY = STRATEGY_MEMORY*2 - 1
 
 # Output format identifiers
 const FORMAT_IDS = {
-  "level": "{LVL}",
-  "module": "{MOD}",
-  "message": "{MSG}"
+	"level": "{LVL}",
+	"module": "{MOD}",
+	"message": "{MSG}",
+	"timestamp": "{TIME}"
 }
 
 # Queue modes
@@ -243,7 +245,7 @@ var default_logfile_path = "user://%s.log" % ProjectSettings.get_setting("applic
 var default_configfile_path = "user://%s.cfg" % PLUGIN_NAME
 
 # e.g. "[INFO] [main] The young alpaca started growing a goatie."
-var output_format = "[{LVL}] [{MOD}] {MSG}"
+var output_format = "[{TIME}] [{LVL}] [{MOD}] {MSG}"
 
 # Holds the name of the debug module for easy usage across all logging functions.
 var default_module_name = "main"
@@ -441,11 +443,33 @@ func get_default_output_level():
 # Output formatting
 # -----------------
 
-static func format(template, level, module, message):
+# Formattes the fields:
+# * yyyy = Year
+# * mm = Month
+# * dd = Day
+# * hh = Hour
+# * MM = Minutes
+# * ss = Seconds
+static func formatted_datetime(template: String):
+	var datetime = OS.get_datetime()
+	
+	var result = template
+	result	= template.replacen("yyyy", "%04d" % [datetime.year])
+	result	= result.replacen("mm", "%02d" % [datetime.month])
+	result	= result.replacen("dd", "%02d" % [datetime.day])
+	result	= result.replacen("hh", "%02d" % [datetime.hour])
+	result	= result.replacen("MM", "%02d" % [datetime.minute])
+	result	= result.replacen("ss", "%02d" % [datetime.second])
+
+	return result
+
+
+func format(template, level, module, message):
 	var output = template
 	output = output.replace(FORMAT_IDS.level, LEVELS[level])
 	output = output.replace(FORMAT_IDS.module, module)
 	output = output.replace(FORMAT_IDS.message, message)
+	output = output.replace(FORMAT_IDS.timestamp, formatted_datetime(get_module(module).time_template))
 	return output
 
 func set_output_format(new_format):
